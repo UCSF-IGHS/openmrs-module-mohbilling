@@ -45,8 +45,8 @@ public class BillingServiceImpl implements BillingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PatientBill> getPatientBillsByPagination(Integer startIndex, Integer pageSize) throws DAOException {
-        return billingDAO.getPatientBillsByPagination(startIndex, pageSize);
+    public List<PatientBill> getPatientBillsByPagination(Integer startIndex, Integer pageSize, String orderBy, String orderDirection) throws DAOException {
+        return billingDAO.getPatientBillsByPagination(startIndex, pageSize, orderBy, orderDirection);
     }
 
     /**
@@ -118,13 +118,15 @@ public class BillingServiceImpl implements BillingService {
 
     /**
      * (non-Javadoc)
-     *
-     * @see org.openmrs.module.mohbilling.service.BillingService#savePatientBill(org.openmrs.module.mohbilling.model.PatientBill)
-     */
-    @Override
-    public void savePatientBill(PatientBill bill) {
+          * @return 
+          *
+          * @see org.openmrs.module.mohbilling.service.BillingService#savePatientBill(org.openmrs.module.mohbilling.model.PatientBill)
+          */
+         @Override
+         public PatientBill savePatientBill(PatientBill bill) {
 
         billingDAO.savePatientBill(bill);
+                return bill;
     }
 
     /**

@@ -24,7 +24,7 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
 @Resource(name = RestConstants.VERSION_1 + "/mohbilling/patientBill",
         supportedClass = PatientBill.class,
         supportedOpenmrsVersions = {"2.0 - 2.*"})
-public class BillingResource extends DelegatingCrudResource<PatientBill> {
+public class PatientBillResource extends DelegatingCrudResource<PatientBill> {
 
     @Override
     public PatientBill getByUniqueId(String uniqueId) {
