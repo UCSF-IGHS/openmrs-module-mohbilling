@@ -3,9 +3,13 @@ package org.openmrs.module.mohbilling.rest.resource;
 import java.util.List;
 import java.math.BigDecimal;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.openmrs.Patient;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.mohbilling.model.Consommation;
 import org.openmrs.module.mohbilling.model.PatientBill;
 import org.openmrs.module.mohbilling.service.BillingProcessingService;
+import org.openmrs.module.mohbilling.service.BillingService;
 import org.openmrs.module.webservices.rest.web.RequestContext;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 import org.openmrs.module.webservices.rest.web.annotation.PropertyGetter;
@@ -23,10 +27,10 @@ import org.openmrs.module.webservices.rest.web.response.ResponseException;
 import org.openmrs.module.webservices.rest.web.annotation.PropertySetter;
 import org.openmrs.module.webservices.rest.web.response.ConversionException;
 
-
 @Resource(name = RestConstants.VERSION_1 + "/mohbilling/patientBill",
         supportedClass = PatientBill.class,
         supportedOpenmrsVersions = {"2.0 - 2.*"})
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PatientBillResource extends DelegatingCrudResource<PatientBill> {
 
     @Override
@@ -52,7 +56,6 @@ public class PatientBillResource extends DelegatingCrudResource<PatientBill> {
     @Override
     public void purge(PatientBill delegate, RequestContext context) throws ResponseException {
         // Implementation not required unless we'd need to permanently delete bills
-        // BA guidance
     }
 
     @Override
@@ -62,54 +65,67 @@ public class PatientBillResource extends DelegatingCrudResource<PatientBill> {
 
     @Override
     public DelegatingResourceDescription getRepresentationDescription(Representation rep) {
-        if (rep instanceof DefaultRepresentation) {
+        if (rep instanceof DefaultRepresentation || rep instanceof RefRepresentation) {
             DelegatingResourceDescription description = new DelegatingResourceDescription();
             description.addProperty("patientBillId");
             description.addProperty("amount");
             description.addProperty("createdDate");
             description.addProperty("status");
             description.addProperty("voided");
-            description.addProperty("payments");
+            description.addProperty("payments", Representation.REF);
             description.addProperty("phoneNumber");
             description.addProperty("transactionStatus");
-            description.addProperty("paymentConfirmedBy");
             description.addProperty("paymentConfirmedDate");
-            description.addSelfLink();
-            description.addLink("full", ".?v=" + RestConstants.REPRESENTATION_FULL);
-            return description;
-        } else if (rep instanceof FullRepresentation) {
-            DelegatingResourceDescription description = new DelegatingResourceDescription();
-            description.addProperty("patientBillId");
-            description.addProperty("amount");
-            description.addProperty("createdDate");
-            description.addProperty("status");
-            description.addProperty("voided");
-            description.addProperty("voidedBy");
-            description.addProperty("voidedDate");
-            description.addProperty("voidReason");
-            description.addProperty("payments");
-            description.addProperty("phoneNumber");
-            description.addProperty("transactionStatus");
-            description.addProperty("paymentConfirmedBy");
-            description.addProperty("paymentConfirmedDate");
-            description.addSelfLink();
-            return description;
-        } else if (rep instanceof RefRepresentation) {
-            DelegatingResourceDescription description = new DelegatingResourceDescription();
-            description.addProperty("patientBillId");
-            description.addProperty("amount");
-            description.addProperty("createdDate");
-            description.addProperty("status");
-            description.addProperty("voided");
-            description.addProperty("payments");
-            description.addProperty("phoneNumber");
-            description.addProperty("transactionStatus");
-            description.addProperty("paymentConfirmedBy");
-            description.addProperty("paymentConfirmedDate");
+            description.addProperty("creator");
+
+            // NEWLY ADDED FIELDS FROM `Consommation`
+            description.addProperty("departmentName");
+            description.addProperty("policyIdNumber");
+            description.addProperty("beneficiaryName");
+            description.addProperty("insuranceName");
+
             description.addSelfLink();
             return description;
         }
         return null;
+    }
+
+    @PropertyGetter("creator")
+    public String getCreator(PatientBill bill) {
+        if (bill.getCreator() != null && bill.getCreator().getPerson() != null) {
+            return bill.getCreator().getPerson().getPersonName().getFullName();
+        }
+        return null;
+    }
+
+    @PropertyGetter("departmentName")
+    public String getDepartmentName(PatientBill bill) {
+        Consommation cons = Context.getService(BillingService.class).getConsommationByPatientBill(bill);
+        return (cons != null && cons.getDepartment() != null) ? cons.getDepartment().getName() : null;
+    }
+
+    @PropertyGetter("policyIdNumber")
+    public String getPolicyIdNumber(PatientBill bill) {
+        Consommation cons = Context.getService(BillingService.class).getConsommationByPatientBill(bill);
+        return (cons != null && cons.getBeneficiary() != null) ? cons.getBeneficiary().getPolicyIdNumber() : null;
+    }
+
+    @PropertyGetter("beneficiaryName")
+    public String getBeneficiaryName(PatientBill bill) {
+        Consommation cons = Context.getService(BillingService.class).getConsommationByPatientBill(bill);
+        if (cons != null && cons.getBeneficiary() != null && cons.getBeneficiary().getPatient() != null) {
+            return cons.getBeneficiary().getPatient().getPersonName().getFullName();
+        }
+        return null;
+    }
+
+    @PropertyGetter("insuranceName")
+    public String getInsuranceName(PatientBill bill) {
+        Consommation cons = Context.getService(BillingService.class).getConsommationByPatientBill(bill);
+        return (cons != null && cons.getBeneficiary() != null &&
+                cons.getBeneficiary().getInsurancePolicy() != null &&
+                cons.getBeneficiary().getInsurancePolicy().getInsurance() != null) ?
+                cons.getBeneficiary().getInsurancePolicy().getInsurance().getName() : null;
     }
 
     @Override
@@ -131,43 +147,22 @@ public class PatientBillResource extends DelegatingCrudResource<PatientBill> {
     @Override
     protected PageableResult doSearch(RequestContext context) {
         BillingProcessingService service = Context.getService(BillingProcessingService.class);
-
         Integer startIndex = context.getStartIndex();
         Integer limit = context.getLimit();
-
-        // Get order parameters from request
         String orderBy = context.getRequest().getParameter("orderBy");
         String orderDirection = context.getRequest().getParameter("order");
-
         List<PatientBill> bills = service.getPatientBillsByPagination(
                 startIndex,
                 limit,
                 orderBy,
                 orderDirection
         );
-
         return new AlreadyPaged<>(context, bills, false);
     }
 
     @Override
     protected PageableResult doGetAll(RequestContext context) throws ResponseException {
-        BillingProcessingService service = Context.getService(BillingProcessingService.class);
-
-        Integer startIndex = context.getStartIndex();
-        Integer limit = context.getLimit();
-
-        // Get order parameters from request
-        String orderBy = context.getRequest().getParameter("orderBy");
-        String orderDirection = context.getRequest().getParameter("order");
-
-        List<PatientBill> bills = service.getPatientBillsByPagination(
-                startIndex,
-                limit,
-                orderBy,
-                orderDirection
-        );
-
-        return new NeedsPaging<PatientBill>(bills, context);
+        return doSearch(context);
     }
 
     @PropertySetter("amount")
