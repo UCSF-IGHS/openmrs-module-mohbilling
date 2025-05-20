@@ -22,6 +22,7 @@ import org.openmrs.module.webservices.rest.web.resource.impl.AlreadyPaged;
 import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingCrudResource;
 import org.openmrs.module.webservices.rest.web.resource.impl.DelegatingResourceDescription;
 import org.openmrs.module.webservices.rest.web.response.ConversionException;
+import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.openmrs.module.webservices.rest.web.response.ResponseException;
 
 import java.math.BigDecimal;
@@ -179,6 +180,16 @@ public class PatientBillResource extends DelegatingCrudResource<PatientBill> {
             log.error("Error getting service name", e);
             return getDepartmentName(bill);
         }
+    }
+
+    @Override
+    public DelegatingResourceDescription getCreatableProperties() throws ResourceDoesNotSupportOperationException {
+        DelegatingResourceDescription description = new DelegatingResourceDescription();
+        description.addRequiredProperty("globalBill");
+        description.addProperty("amount");
+        description.addProperty("departmentId");
+        description.addProperty("createdDate");
+        return description;
     }
 
     @Override
