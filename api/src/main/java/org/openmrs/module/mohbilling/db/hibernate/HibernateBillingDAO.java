@@ -1372,6 +1372,16 @@ public class HibernateBillingDAO implements BillingDAO {
     }
 
     @Override
+    public DepositPayment getDepositPayment(Integer depositPaymentId) {
+        return (DepositPayment) sessionFactory.getCurrentSession().get(DepositPayment.class, depositPaymentId);
+    }
+
+    @Override
+    public List<DepositPayment> getAllDepositPayments() {
+        return sessionFactory.getCurrentSession().createCriteria(DepositPayment.class).list();
+    }
+
+    @Override
     public List<HopService> getHospitalServicesByDepartment(
             Department department) {
         Criteria crit = sessionFactory.getCurrentSession().createCriteria(ServiceCategory.class)
