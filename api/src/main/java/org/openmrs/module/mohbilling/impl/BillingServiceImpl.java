@@ -836,6 +836,16 @@ public class BillingServiceImpl implements BillingService {
         return billingDAO.saveDepositPayment(depositPayment);
     }
 
+    @Override
+    public DepositPayment getDepositPayment(Integer depositPaymentId) {
+        return billingDAO.getDepositPayment(depositPaymentId);
+    }
+
+    @Override
+    public List<DepositPayment> getAllDepositPayments() {
+        return billingDAO.getAllDepositPayments();
+    }
+
     /*
      * (non-Javadoc)
      *
