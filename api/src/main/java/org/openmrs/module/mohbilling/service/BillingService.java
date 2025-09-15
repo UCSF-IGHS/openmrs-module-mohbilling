@@ -589,6 +589,20 @@ public interface BillingService {
 	
 
 	public DepositPayment saveDepositPayment(DepositPayment depositPayment);
+	
+	/**
+	 * Gets DepositPayment by a given depositPaymentId
+	 * @param depositPaymentId
+	 * @return DepositPayment
+	 */
+	public DepositPayment getDepositPayment(Integer depositPaymentId);
+	
+	/**
+	 * Gets all existing DepositPayments
+	 * @return List<DepositPayment>
+	 */
+	public List<DepositPayment> getAllDepositPayments();
+	
 	/**
 	 * Gets hospital services by department
 	 * @param department
